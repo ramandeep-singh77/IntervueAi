@@ -9,7 +9,7 @@ import axios from 'axios';
 const api = axios.create({
   baseURL: process.env.REACT_APP_API_URL || (
     process.env.NODE_ENV === 'production' 
-      ? 'https://your-vercel-app.vercel.app' 
+      ? 'https://intervue-ai.vercel.app/api' 
       : 'http://localhost:8001'
   ),
   timeout: 30000, // 30 seconds timeout

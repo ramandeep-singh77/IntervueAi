@@ -46,7 +46,7 @@ A comprehensive full-stack web application that helps users practice and improve
 
 ## 🚀 Live Demo
 
-**🌐 [Try InterVue AI Live](https://your-vercel-app.vercel.app)**
+**🌐 [Try InterVue AI Live](https://intervue-ai.vercel.app)**
 
 ## 🛠️ Tech Stack
 
@@ -190,7 +190,7 @@ GEMINI_API_KEY=your_gemini_api_key
 DEEPGRAM_API_KEY=your_deepgram_api_key
 
 # Frontend (Production)
-REACT_APP_API_URL=https://your-vercel-app.vercel.app/api
+REACT_APP_API_URL=https://intervue-ai.vercel.app/api
 ```
 
 ### Customization
