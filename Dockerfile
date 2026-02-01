@@ -1,48 +1,44 @@
-# Use Python 3.9 as base image
+# Minimal Dockerfile for Railway deployment
 FROM python:3.9-slim
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     curl \
-    ffmpeg \
-    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Node.js 18
 RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
     && apt-get install -y nodejs
 
-# Verify installations
-RUN python --version && node --version && npm --version
-
 # Set working directory
 WORKDIR /app
 
-# Copy Python requirements and install
+# Copy and install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy frontend package files first
+# Copy frontend package files and install
 COPY frontend/package*.json ./frontend/
 WORKDIR /app/frontend
-RUN npm install --production=false
+RUN npm ci --only=production
 
-# Copy all source code
+# Copy source code
 WORKDIR /app
 COPY . .
 
-# Build React frontend with verbose output
+# Build frontend
 WORKDIR /app/frontend
-RUN npm run build && ls -la build/
+RUN npm run build
 
-# Verify build was successful
-RUN test -d build && test -f build/index.html && echo "✅ Frontend build successful" || echo "❌ Frontend build failed"
-
-# Back to app directory
+# Back to app root
 WORKDIR /app
 
 # Expose port
 EXPOSE 8000
 
-# Start command
-CMD ["python", "main.py"]
+# Start application with simple main
+CMD ["python", "main_simple.py"]
