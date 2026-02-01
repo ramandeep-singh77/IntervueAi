@@ -1,6 +1,6 @@
 """
 InterVue AI - Main Application for Render Deployment
-AI-powered interview practice platform
+AI-powered interview practice platform (Demo Mode)
 """
 
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request

@@ -26,7 +26,7 @@
 
 **Build Command:**
 ```bash
-pip install -r requirements.txt && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && apt-get install -y nodejs && cd frontend && npm install && npm run build && cd ..
+pip install --upgrade pip && pip install -r requirements.txt && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && apt-get install -y nodejs && cd frontend && npm install && npm run build && cd ..
 ```
 
 **Start Command:**
@@ -109,7 +109,7 @@ After deployment, test these URLs:
 
 ### **Alternative Build Command (if above fails):**
 ```bash
-pip install -r requirements.txt && apt-get update && apt-get install -y curl && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && apt-get install -y nodejs && cd frontend && npm install && npm run build && cd ..
+pip install --upgrade pip && pip install fastapi uvicorn python-multipart python-dotenv pydantic && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && apt-get install -y nodejs && cd frontend && npm install && npm run build && cd ..
 ```
 
 ### **Frontend Not Loading**
