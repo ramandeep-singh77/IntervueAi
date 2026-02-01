@@ -37,7 +37,7 @@ InterVue AI is a comprehensive full-stack web application that helps users pract
 
 ## 🚀 Live Demo
 
-**🌐 [Try InterVue AI Live](https://intervue-ai.vercel.app)**
+**🌐 [Try InterVue AI Live](https://intervue-ai-main.vercel.app/)**
 
 ## 🛠️ Tech Stack
 
@@ -57,8 +57,6 @@ InterVue AI is a comprehensive full-stack web application that helps users pract
 
 ### Deployment
 - **Vercel** - Serverless deployment platform
-- **GitHub Actions** - CI/CD pipeline
-- **Environment Variables** - Secure configuration
 
 ## 📋 Quick Start
 
@@ -109,23 +107,7 @@ npm start
 - **Backend API**: http://localhost:8000
 - **API Documentation**: http://localhost:8000/docs
 
-## 🌐 Deployment
 
-### Vercel Deployment (Recommended)
-
-1. **Fork this repository**
-2. **Connect to Vercel**:
-   - Go to [vercel.com](https://vercel.com)
-   - Import your GitHub repository
-   - Vercel auto-detects configuration
-
-3. **Set Environment Variables**:
-   ```
-   GEMINI_API_KEY=your_gemini_api_key
-   DEEPGRAM_API_KEY=your_deepgram_api_key
-   ```
-
-4. **Deploy**: Automatic deployment from `vercel.json`
 
 📖 **Detailed deployment guide**: [DEPLOYMENT.md](./DEPLOYMENT.md)
 
@@ -219,7 +201,7 @@ This project is licensed under the MIT License - see the [LICENSE](./LICENSE) fi
 
 - **Issues**: [GitHub Issues](https://github.com/ramandeep-singh77/IntervueAi/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/ramandeep-singh77/IntervueAi/discussions)
-- **Email**: ramandeep.singh77@example.com
+- **Email**: ramandeepsinghrds2006@gmail.com
 
 ## 🎉 Star History
 
