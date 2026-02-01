@@ -808,6 +808,8 @@ def calculate_confidence_score(responses):
     
     voice_scores = []
     emotion_scores = []
+    eye_contact_scores = []
+    speech_quality_scores = []
     
     for response in responses:
         # Voice metrics
@@ -815,7 +817,8 @@ def calculate_confidence_score(responses):
         if voice_metrics:
             stability = voice_metrics.get("stability_score", 70)
             clarity = voice_metrics.get("clarity_score", 70)
-            voice_scores.append((stability + clarity) / 2)
+            voice_scores.append(stability)
+            speech_quality_scores.append(clarity)
         
         # Emotion metrics
         emotion_analysis = response.get("emotion_analysis", {})
@@ -823,17 +826,47 @@ def calculate_confidence_score(responses):
             metrics = emotion_analysis.get("metrics", {})
             confidence = metrics.get("confidence_score", 70)
             eye_contact = metrics.get("eye_contact_percentage", 70)
-            emotion_scores.append((confidence + eye_contact) / 2)
+            emotion_scores.append(confidence)
+            eye_contact_scores.append(eye_contact)
     
-    # Calculate overall score
-    all_scores = voice_scores + emotion_scores
-    overall_score = sum(all_scores) / len(all_scores) if all_scores else 70
+    # Calculate component scores
+    voice_stability_score = sum(voice_scores) / len(voice_scores) if voice_scores else 70
+    eye_contact_score = sum(eye_contact_scores) / len(eye_contact_scores) if eye_contact_scores else 70
+    speech_quality_score = sum(speech_quality_scores) / len(speech_quality_scores) if speech_quality_scores else 70
+    
+    # Calculate overall score with proper weighting
+    component_scores = {
+        "voice_stability": {"score": voice_stability_score, "weight": 0.35},
+        "eye_contact": {"score": eye_contact_score, "weight": 0.35},
+        "speech_quality": {"score": speech_quality_score, "weight": 0.30}
+    }
+    
+    # Calculate weighted overall score
+    overall_score = sum(data["score"] * data["weight"] for data in component_scores.values())
+    
+    # Add score interpretation
+    if overall_score >= 85:
+        level = "Excellent"
+        description = "Outstanding performance across all areas"
+    elif overall_score >= 75:
+        level = "Very Good"
+        description = "Strong performance with minor areas for improvement"
+    elif overall_score >= 65:
+        level = "Good"
+        description = "Good performance with some areas for development"
+    elif overall_score >= 55:
+        level = "Fair"
+        description = "Acceptable performance but needs improvement"
+    else:
+        level = "Needs Improvement"
+        description = "Significant improvement needed in multiple areas"
     
     return {
         "overall_score": round(overall_score, 1),
-        "component_scores": {
-            "voice_stability": {"score": sum(voice_scores) / len(voice_scores) if voice_scores else 70, "weight": 0.4},
-            "emotional_confidence": {"score": sum(emotion_scores) / len(emotion_scores) if emotion_scores else 70, "weight": 0.6}
+        "component_scores": component_scores,
+        "score_interpretation": {
+            "level": level,
+            "description": description
         }
     }
 

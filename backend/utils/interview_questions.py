@@ -31,7 +31,17 @@ class InterviewQuestionGenerator:
                     "What programming languages are you most comfortable with and why?",
                     "Describe a challenging project you worked on during your studies.",
                     "How do you approach debugging when your code isn't working?",
-                    "What do you know about our company and why do you want to work here?"
+                    "What do you know about our company and why do you want to work here?",
+                    "Explain the difference between object-oriented and functional programming.",
+                    "How do you stay updated with new programming technologies?",
+                    "Describe a time when you had to learn a new technology quickly.",
+                    "What is your favorite programming language and why?",
+                    "How do you handle version control in your projects?",
+                    "What are some best practices for writing clean code?",
+                    "Describe your experience with databases and SQL.",
+                    "How would you explain APIs to a non-technical person?",
+                    "What motivates you to pursue a career in software development?",
+                    "Describe a time when you collaborated on a coding project."
                 ],
                 "Experienced": [
                     "Walk me through your experience with software architecture and design patterns.",
@@ -223,7 +233,7 @@ class InterviewQuestionGenerator:
             return "behavioral"  # Default
     
     def _get_fallback_questions(self, role: str, experience_level: str, num_questions: int) -> List[Dict]:
-        """Get fallback questions from predefined sets"""
+        """Get fallback questions from predefined sets with randomization for variety"""
         if role not in self.fallback_questions:
             role = "Software Engineer"  # Default role
         
@@ -232,25 +242,42 @@ class InterviewQuestionGenerator:
         
         available_questions = self.fallback_questions[role][experience_level]
         
-        # Select questions (shuffle for variety)
-        selected_questions = random.sample(
-            available_questions, 
-            min(num_questions, len(available_questions))
-        )
+        # Add some randomization to make questions feel fresh
+        import time
+        import hashlib
         
-        # Format as question objects
+        # Create a seed based on current time to ensure different questions each time
+        seed = int(time.time()) % 1000
+        random.seed(seed)
+        
+        # Shuffle the available questions
+        shuffled_questions = available_questions.copy()
+        random.shuffle(shuffled_questions)
+        
+        # Select questions (ensure we don't exceed available questions)
+        selected_questions = shuffled_questions[:min(num_questions, len(shuffled_questions))]
+        
+        # If we need more questions, cycle through the list
+        while len(selected_questions) < num_questions:
+            remaining_needed = num_questions - len(selected_questions)
+            additional_questions = shuffled_questions[:remaining_needed]
+            selected_questions.extend(additional_questions)
+        
+        # Format as question objects with some variation
         formatted_questions = []
         for i, question in enumerate(selected_questions):
             formatted_questions.append({
                 "id": i + 1,
                 "question": question,
                 "type": self._classify_question_type(question),
-                "difficulty": "medium",
-                "expected_duration": 60,
+                "difficulty": random.choice(["easy", "medium", "hard"]) if experience_level == "Experienced" else random.choice(["easy", "medium"]),
+                "expected_duration": random.randint(45, 120),
                 "role": role,
-                "experience_level": experience_level
+                "experience_level": experience_level,
+                "source": "fallback_randomized"
             })
         
+        print(f"✓ Generated {len(formatted_questions)} randomized fallback questions for {role} ({experience_level})")
         return formatted_questions
     
     def get_available_roles(self) -> List[str]:

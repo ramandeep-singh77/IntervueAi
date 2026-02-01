@@ -189,6 +189,7 @@ const InterviewSession = () => {
         transcript: audioResults.transcript,
         voice_metrics: audioResults.voice_metrics,
         emotion_analysis: videoResults.emotion_analysis,
+        answer_rating: audioResults.answer_rating, // Add answer rating from audio analysis
         timestamp: new Date().toISOString()
       };
       
@@ -421,6 +422,45 @@ const InterviewSession = () => {
                       Confidence: {Math.round(currentAnalysis.transcript.confidence * 100)}%
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* Answer Rating */}
+              {currentAnalysis.answer_rating && (
+                <div className="mb-4">
+                  <h4 className="font-medium text-gray-700 mb-2">AI Answer Rating:</h4>
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center">
+                        <div className="text-2xl font-bold text-blue-600 mr-2">
+                          {currentAnalysis.answer_rating.overall_rating?.score || 0}/10
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          {currentAnalysis.answer_rating.overall_rating?.level || 'Not Rated'}
+                        </div>
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        AI-Powered Rating
+                      </div>
+                    </div>
+                    
+                    {currentAnalysis.answer_rating.feedback && (
+                      <div className="text-sm text-gray-700 mb-2">
+                        <strong>Feedback:</strong> {currentAnalysis.answer_rating.feedback}
+                      </div>
+                    )}
+                    
+                    {currentAnalysis.answer_rating.improvements && currentAnalysis.answer_rating.improvements.length > 0 && (
+                      <div className="text-sm">
+                        <strong className="text-gray-700">Improvements:</strong>
+                        <ul className="list-disc list-inside mt-1 text-gray-600">
+                          {currentAnalysis.answer_rating.improvements.slice(0, 2).map((improvement, index) => (
+                            <li key={index}>{improvement}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
               

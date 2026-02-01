@@ -2,47 +2,38 @@
 
 **AI-Powered Interview Practice Platform**
 
-A comprehensive full-stack web application that helps users practice and improve their interview skills using advanced AI analysis for real-time feedback on confidence, emotions, voice tone, and communication patterns.
+InterVue AI is a comprehensive full-stack web application that helps users practice interviews with real-time AI analysis. Get instant feedback on your speaking skills, eye contact, voice quality, and answer content using advanced AI technologies.
 
-![InterVue AI](https://img.shields.io/badge/Status-Production%20Ready-brightgreen)
-![React](https://img.shields.io/badge/Frontend-React-blue)
-![FastAPI](https://img.shields.io/badge/Backend-FastAPI-green)
-![Vercel](https://img.shields.io/badge/Deploy-Vercel-black)
+![InterVue AI](https://img.shields.io/badge/InterVue-AI%20Powered-blue?style=for-the-badge)
+![React](https://img.shields.io/badge/React-18.2.0-61DAFB?style=for-the-badge&logo=react)
+![FastAPI](https://img.shields.io/badge/FastAPI-Latest-009688?style=for-the-badge&logo=fastapi)
+![Python](https://img.shields.io/badge/Python-3.8+-3776AB?style=for-the-badge&logo=python)
 
-## 🌟 Features
+## ✨ Features
 
-### 🎥 **Real-Time Video Analysis**
-- **Face Detection**: Advanced OpenCV-based facial recognition
-- **Eye Contact Tracking**: Measures engagement and confidence
-- **Emotion Analysis**: Real-time confidence and nervousness detection
-- **Position Stability**: Tracks posture and movement consistency
+### 🎤 **Real-Time Analysis**
+- **Speech-to-Text**: Accurate transcription using Google Speech Recognition
+- **Voice Analysis**: Real-time voice stability, clarity, and speaking rate analysis
+- **Emotion Detection**: Facial expression and confidence level analysis using OpenCV
+- **Eye Contact Tracking**: Camera engagement monitoring with percentage feedback
 
-### 🎤 **Advanced Audio Processing**
-- **Speech-to-Text**: Google Speech Recognition integration
-- **Speaking Rate Analysis**: Words per minute calculation
-- **Filler Word Detection**: Identifies "um", "uh", "like" patterns
-- **Voice Stability**: Pitch and energy consistency analysis
-- **Real Analysis**: 0 WPM when silent, actual metrics when speaking
+### 🤖 **AI-Powered Feedback**
+- **Fresh Questions**: Dynamic question generation using Gemini AI for every session
+- **Answer Rating**: Individual answer scoring (1-10) with detailed AI feedback
+- **Comprehensive Analysis**: Overall performance scoring with component breakdowns
+- **Personalized Tips**: Actionable improvement suggestions based on your performance
 
-### 🤖 **AI-Powered Intelligence**
-- **Dynamic Questions**: Gemini AI generates unique questions every session
-- **Role-Specific Content**: Tailored for Software Engineer, HR, Data Analyst roles
-- **Experience-Based**: Different questions for Fresher vs Experienced levels
-- **Personalized Feedback**: AI-generated improvement suggestions
+### 📊 **Advanced Analytics**
+- **Performance Dashboard**: Visual charts and metrics for all interview aspects
+- **Progress Tracking**: Detailed analytics with eye contact, voice, and speech metrics
+- **Export Functionality**: Download results in JSON/CSV format
+- **Share Results**: Easy sharing of interview performance
 
-### 📊 **Comprehensive Analytics**
-- **Interactive Dashboards**: Real-time performance visualization
-- **Confidence Scoring**: Multi-factor confidence calculation
-- **Detailed Metrics**: Speech, voice, and emotion analytics
-- **Export Functionality**: JSON and CSV report generation
-- **Share Results**: Social sharing capabilities
-
-### ⚙️ **Technical Excellence**
-- **Serverless Architecture**: Optimized for Vercel deployment
-- **Real-Time Processing**: WebRTC for audio/video capture
-- **Responsive Design**: Works on desktop and mobile
-- **Error Handling**: Graceful fallbacks for all scenarios
-- **Performance Optimized**: Fast loading and smooth interactions
+### 🎯 **Interview Customization**
+- **Multiple Roles**: Software Engineer, HR, Data Analyst, and more
+- **Experience Levels**: Tailored questions for Fresher and Experienced candidates
+- **Question Count**: Choose 3-10 questions per session
+- **Real-Time Feedback**: Instant analysis during and after each response
 
 ## 🚀 Live Demo
 
@@ -97,8 +88,8 @@ DEEPGRAM_API_KEY=your_deepgram_api_key_here
 # Install Python dependencies
 pip install -r requirements.txt
 
-# Start backend server
-python backend/main.py
+# Start backend server (Port 8000)
+python main.py
 ```
 
 ### 4. Frontend Setup
@@ -109,13 +100,14 @@ cd frontend
 # Install dependencies
 npm install
 
-# Start development server
+# Start development server (Port 3000)
 npm start
 ```
 
 ### 5. Access Application
 - **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:8001
+- **Backend API**: http://localhost:8000
+- **API Documentation**: http://localhost:8000/docs
 
 ## 🌐 Deployment
 
@@ -189,8 +181,8 @@ GEMINI_API_KEY=your_gemini_api_key
 # Optional
 DEEPGRAM_API_KEY=your_deepgram_api_key
 
-# Frontend (Production)
-REACT_APP_API_URL=https://intervue-ai.vercel.app/api
+# Frontend Configuration
+REACT_APP_API_URL=http://localhost:8000
 ```
 
 ### Customization

@@ -10,7 +10,7 @@ const api = axios.create({
   baseURL: process.env.REACT_APP_API_URL || (
     process.env.NODE_ENV === 'production' 
       ? '' // Railway serves both frontend and API from same domain
-      : 'http://localhost:8001'
+      : 'http://localhost:8000'
   ),
   timeout: 30000, // 30 seconds timeout
   headers: {
