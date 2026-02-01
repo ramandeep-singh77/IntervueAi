@@ -27,7 +27,7 @@ Railway is perfect for InterVue AI because it:
 2. Click **"New Project"**
 3. Select **"Deploy from GitHub repo"**
 4. Choose repository: `ramandeep-singh77/IntervueAi`
-5. Railway will auto-detect the project and start building
+5. Railway will auto-detect the Dockerfile and start building
 
 ### **2. Configure Environment Variables**
 
@@ -46,9 +46,13 @@ PYTHONPATH=/app
 NODE_ENV=production
 ```
 
-### **3. Custom Build Configuration (Auto-detected)**
+### **3. Build Process (Automatic)**
 
 Railway will automatically:
+- ✅ **Use Dockerfile** for consistent builds
+- ✅ **Install Python 3.9** and system dependencies
+- ✅ **Install Node.js 18** for frontend building
+- ✅ **Install FFmpeg** for audio processing
 - ✅ **Install Python dependencies** from `requirements.txt`
 - ✅ **Install Node.js dependencies** from `frontend/package.json`
 - ✅ **Build React frontend** with `npm run build`
