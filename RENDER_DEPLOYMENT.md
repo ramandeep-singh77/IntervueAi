@@ -4,9 +4,6 @@
 
 1. **GitHub Repository**: Code pushed to GitHub
 2. **Render Account**: Sign up at [render.com](https://render.com)
-3. **API Keys** (Optional for demo mode):
-   - Google Gemini API Key
-   - Deepgram API Key
 
 ## 🔧 Deployment Steps
 
@@ -25,16 +22,22 @@
 - **Region**: Choose closest to your users
 - **Branch**: `main`
 
-**Build & Deploy:**
-- **Build Command**: `./build.sh`
-- **Start Command**: `python main.py`
+**Build & Deploy Settings:**
 
-### 3. Environment Variables
+**Build Command:**
+```bash
+pip install -r requirements.txt && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && apt-get install -y nodejs && cd frontend && npm install && npm run build && cd ..
+```
 
-Add these environment variables in Render dashboard:
+**Start Command:**
+```bash
+python main.py
+```
+
+### 3. Environment Variables (Optional)
 
 **Required:**
-- `PORT`: `10000` (Render will set this automatically)
+- `PORT`: `10000` (Render sets this automatically)
 
 **Optional (for AI features):**
 - `GEMINI_API_KEY`: Your Google Gemini API key
@@ -102,7 +105,12 @@ After deployment, test these URLs:
 ### **Build Fails**
 - Check build logs in Render dashboard
 - Ensure all dependencies are in `requirements.txt`
-- Verify Node.js installation in build script
+- Try the alternative build command below
+
+### **Alternative Build Command (if above fails):**
+```bash
+pip install -r requirements.txt && apt-get update && apt-get install -y curl && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && apt-get install -y nodejs && cd frontend && npm install && npm run build && cd ..
+```
 
 ### **Frontend Not Loading**
 - Check if `frontend/build` directory exists

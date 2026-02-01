@@ -1,6 +1,5 @@
 #!/bin/bash
-
-# Build script for Render deployment
+set -e
 
 echo "🚀 Starting InterVue AI build process..."
 
@@ -8,17 +7,17 @@ echo "🚀 Starting InterVue AI build process..."
 echo "📦 Installing Python dependencies..."
 pip install -r requirements.txt
 
-# Check if Node.js is available, if not install it
+# Install Node.js if not available
 if ! command -v node &> /dev/null; then
     echo "📦 Installing Node.js..."
-    curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-    sudo apt-get install -y nodejs
+    curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
+    apt-get install -y nodejs
 fi
 
 # Build React frontend
 echo "🔨 Building React frontend..."
 cd frontend
-npm install
+npm ci --only=production
 npm run build
 cd ..
 
