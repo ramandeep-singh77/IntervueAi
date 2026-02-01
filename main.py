@@ -602,20 +602,73 @@ async def get_experience_levels():
     levels = ["Fresher", "Experienced"]
     return {"levels": levels}
 
-# Serve React frontend (Railway will build this automatically)
-if os.path.exists("frontend/build"):
-    app.mount("/static", StaticFiles(directory="frontend/build/static"), name="static")
+# Serve React frontend
+frontend_build_path = Path("frontend/build")
+print(f"Checking for frontend build at: {frontend_build_path.absolute()}")
+print(f"Frontend build exists: {frontend_build_path.exists()}")
+
+if frontend_build_path.exists():
+    print("✅ Frontend build found - serving React app")
+    
+    # List contents of build directory for debugging
+    try:
+        build_contents = list(frontend_build_path.iterdir())
+        print(f"Build directory contents: {[f.name for f in build_contents]}")
+        
+        static_path = frontend_build_path / "static"
+        if static_path.exists():
+            print(f"Static directory found with contents: {[f.name for f in static_path.iterdir()]}")
+            app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
+        else:
+            print("⚠️ Static directory not found in build")
+            
+    except Exception as e:
+        print(f"Error reading build directory: {e}")
     
     @app.get("/{path:path}")
     async def serve_frontend(path: str):
-        if path.startswith("api/"):
+        # Don't serve frontend for API routes
+        if path.startswith("api"):
             raise HTTPException(status_code=404, detail="API endpoint not found")
         
-        file_path = Path("frontend/build") / path
+        # Serve specific files if they exist
+        file_path = frontend_build_path / path
         if file_path.is_file():
-            return FileResponse(file_path)
+            return FileResponse(str(file_path))
+        
+        # For all other routes, serve index.html (React Router)
+        index_path = frontend_build_path / "index.html"
+        if index_path.exists():
+            return FileResponse(str(index_path))
         else:
-            return FileResponse("frontend/build/index.html")
+            raise HTTPException(status_code=404, detail="Frontend not available")
+else:
+    print("⚠️ Frontend build not found - serving API only")
+    print(f"Current working directory: {os.getcwd()}")
+    print(f"Directory contents: {os.listdir('.')}")
+    
+    if os.path.exists("frontend"):
+        print(f"Frontend directory contents: {os.listdir('frontend')}")
+    
+    @app.get("/")
+    async def root_with_instructions():
+        return {
+            "message": "InterVue AI API is running on Railway!",
+            "status": "healthy",
+            "environment": "railway",
+            "note": "Frontend build not found. The React app may not have built successfully.",
+            "debug_info": {
+                "cwd": os.getcwd(),
+                "frontend_exists": os.path.exists("frontend"),
+                "build_path_checked": str(frontend_build_path.absolute()),
+                "build_exists": frontend_build_path.exists()
+            },
+            "api_endpoints": {
+                "health": "/api/health",
+                "roles": "/api/roles",
+                "start_interview": "/api/interview/start"
+            }
+        }
 
 if __name__ == "__main__":
     import uvicorn

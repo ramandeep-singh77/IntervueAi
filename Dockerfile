@@ -12,6 +12,9 @@ RUN apt-get update && apt-get install -y \
 RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
     && apt-get install -y nodejs
 
+# Verify installations
+RUN python --version && node --version && npm --version
+
 # Set working directory
 WORKDIR /app
 
@@ -19,15 +22,24 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy frontend package files and install dependencies
+# Copy frontend package files first
 COPY frontend/package*.json ./frontend/
-RUN cd frontend && npm install
+WORKDIR /app/frontend
+RUN npm install --production=false
 
 # Copy all source code
+WORKDIR /app
 COPY . .
 
-# Build React frontend
-RUN cd frontend && npm run build
+# Build React frontend with verbose output
+WORKDIR /app/frontend
+RUN npm run build && ls -la build/
+
+# Verify build was successful
+RUN test -d build && test -f build/index.html && echo "✅ Frontend build successful" || echo "❌ Frontend build failed"
+
+# Back to app directory
+WORKDIR /app
 
 # Expose port
 EXPOSE 8000
