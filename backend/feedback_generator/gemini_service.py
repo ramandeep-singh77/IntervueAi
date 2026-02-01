@@ -16,7 +16,11 @@ class FeedbackGenerator:
         
         # Configure Gemini
         genai.configure(api_key=self.api_key)
-        self.model = genai.GenerativeModel('gemini-pro')
+        try:
+            self.model = genai.GenerativeModel('gemini-pro')
+        except AttributeError:
+            # Fallback for older versions of google-generativeai
+            self.model = genai
         
         # Feedback templates and guidelines
         self.feedback_tone_guidelines = """
@@ -152,8 +156,13 @@ class FeedbackGenerator:
         """
         
         try:
-            response = self.model.generate_content(prompt)
-            return response.text.strip()
+            if hasattr(self.model, 'generate_content'):
+                response = self.model.generate_content(prompt)
+                return response.text.strip()
+            else:
+                # Fallback for older API
+                response = genai.generate_text(prompt=prompt)
+                return response.result if hasattr(response, 'result') else str(response).strip()
         except Exception as e:
             return f"Great job completing the interview practice session! Your confidence level shows {analysis_summary['confidence_level'].lower()} performance with room for growth. Keep practicing to build your interview skills and confidence."
     

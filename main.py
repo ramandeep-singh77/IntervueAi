@@ -1,10 +1,13 @@
 """
 InterVue AI - Full-Stack Interview Practice Platform
 Real AI-powered analysis with FastAPI backend and React frontend
+Enhanced with fresh question generation and answer rating using Gemini AI
 """
 
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 import os
 import sys
 import uuid
@@ -28,12 +31,16 @@ try:
     from real_audio_analyzer import RealAudioAnalyzer
     from real_video_analyzer import RealVideoAnalyzer
     from utils.interview_questions import InterviewQuestionGenerator
+    from feedback_generator.answer_rating_service import AnswerRatingService
+    from feedback_generator.gemini_service import FeedbackGenerator
     print("✓ Real analysis modules imported successfully")
 except ImportError as e:
     print(f"⚠ Import warning: {e}")
     RealAudioAnalyzer = None
     RealVideoAnalyzer = None
     InterviewQuestionGenerator = None
+    AnswerRatingService = None
+    FeedbackGenerator = None
 
 app = FastAPI(
     title="InterVue AI",
@@ -54,6 +61,8 @@ app.add_middleware(
 audio_analyzer = None
 video_analyzer = None
 question_generator = None
+answer_rater = None
+feedback_generator = None
 
 try:
     if RealAudioAnalyzer:
@@ -75,6 +84,20 @@ try:
         print("✓ Question generator initialized")
 except Exception as e:
     print(f"⚠ Question generator initialization failed: {str(e)}")
+
+try:
+    if AnswerRatingService:
+        answer_rater = AnswerRatingService()
+        print("✓ Answer rating service initialized")
+except Exception as e:
+    print(f"⚠ Answer rating service initialization failed: {str(e)}")
+
+try:
+    if FeedbackGenerator:
+        feedback_generator = FeedbackGenerator()
+        print("✓ Feedback generator initialized")
+except Exception as e:
+    print(f"⚠ Feedback generator initialization failed: {str(e)}")
 
 # In-memory storage
 sessions = {}
@@ -243,9 +266,16 @@ async def health_check():
         "audio_analyzer": audio_analyzer is not None,
         "video_analyzer": video_analyzer is not None,
         "question_generator": question_generator is not None,
+        "answer_rater": answer_rater is not None,
+        "feedback_generator": feedback_generator is not None,
         "api_keys": {
             "gemini": bool(os.getenv("GEMINI_API_KEY")),
             "deepgram": bool(os.getenv("DEEPGRAM_API_KEY"))
+        },
+        "features": {
+            "fresh_questions": question_generator is not None,
+            "answer_rating": answer_rater is not None,
+            "ai_feedback": feedback_generator is not None
         }
     }
 
@@ -255,30 +285,30 @@ async def start_interview(
     experience_level: str = Form(...),
     num_questions: int = Form(5)
 ):
-    """Initialize a new interview session with AI-generated questions"""
+    """Initialize a new interview session with fresh AI-generated questions"""
     try:
         session_id = str(uuid.uuid4())
         
-        # Generate questions using AI if available
+        # Always try to generate fresh questions using Gemini AI first
         questions = []
         if question_generator:
             try:
                 questions = await question_generator.generate_questions(role, experience_level, num_questions)
-                print(f"✓ Generated {len(questions)} questions using Gemini AI")
+                print(f"✓ Generated {len(questions)} fresh questions using Gemini AI")
             except Exception as e:
                 print(f"⚠ AI question generation failed: {str(e)}")
                 questions = []
         
-        # Fallback to demo questions if AI generation fails
+        # Only use fallback questions if AI generation completely fails
         if not questions:
             demo_questions = DEMO_QUESTIONS.get(role, {}).get(experience_level, [])
             if demo_questions:
                 selected_count = min(num_questions, len(demo_questions))
                 questions = random.sample(demo_questions, selected_count)
-                print(f"Using {len(questions)} fallback questions")
+                print(f"⚠ Using {len(questions)} fallback questions (AI generation failed)")
             else:
                 questions = DEMO_QUESTIONS["Software Engineer"]["Fresher"][:num_questions]
-                print(f"Using default questions")
+                print(f"⚠ Using default questions (no role-specific fallback)")
         
         # Create session
         session_data = {
@@ -289,7 +319,9 @@ async def start_interview(
             "questions": questions,
             "current_question": 0,
             "responses": [],
-            "created_at": str(asyncio.get_event_loop().time())
+            "answer_ratings": [],  # Store individual answer ratings
+            "created_at": str(asyncio.get_event_loop().time()),
+            "questions_source": "ai_generated" if question_generator and questions else "fallback"
         }
         
         sessions[session_id] = session_data
@@ -299,7 +331,8 @@ async def start_interview(
             "questions": questions,
             "total_questions": len(questions),
             "role": role,
-            "experience_level": experience_level
+            "experience_level": experience_level,
+            "questions_source": session_data["questions_source"]
         }
         
     except Exception as e:
@@ -348,8 +381,15 @@ async def analyze_audio(
                 "voice_activity": voice_activity
             }
             
-            # Store results in session
+            # Store results in session with answer rating
             if session_id in sessions:
+                session_data = sessions[session_id]
+                
+                # Get the current question for rating
+                current_question = None
+                if question_index < len(session_data.get("questions", [])):
+                    current_question = session_data["questions"][question_index]
+                
                 response_data = {
                     "question_index": question_index,
                     "transcript": transcript_data,
@@ -358,15 +398,51 @@ async def analyze_audio(
                     "timestamp": str(asyncio.get_event_loop().time())
                 }
                 
+                # Generate AI rating for the answer if we have the question and answer rater
+                if current_question and answer_rater and transcript_data.get("transcript"):
+                    try:
+                        answer_rating = await answer_rater.rate_answer(
+                            question=current_question.get("question", ""),
+                            answer=transcript_data["transcript"],
+                            question_type=current_question.get("type", "behavioral"),
+                            role=session_data["role"],
+                            experience_level=session_data["experience_level"],
+                            transcript_data=transcript_data,
+                            voice_metrics=voice_metrics
+                        )
+                        response_data["answer_rating"] = answer_rating
+                        
+                        # Store in session's answer ratings
+                        if "answer_ratings" not in session_data:
+                            session_data["answer_ratings"] = []
+                        session_data["answer_ratings"].append(answer_rating)
+                        
+                        print(f"✓ Generated AI rating: {answer_rating['overall_rating']['score']}/10 ({answer_rating['overall_rating']['level']})")
+                        
+                    except Exception as e:
+                        print(f"⚠ Answer rating failed: {str(e)}")
+                        response_data["answer_rating"] = None
+                
                 sessions[session_id]["responses"].append(response_data)
             
             print(f"✓ Real audio analysis completed: {transcript_data['word_count']} words, {voice_activity['speech_percentage']:.1f}% speech")
             
-            return {
+            # Prepare response with answer rating if available
+            response = {
                 "transcript": transcript_data,
                 "voice_metrics": voice_metrics,
                 "status": "success"
             }
+            
+            # Add answer rating if it was generated
+            if session_id in sessions:
+                session_responses = sessions[session_id].get("responses", [])
+                if session_responses and len(session_responses) > question_index:
+                    latest_response = session_responses[-1]  # Get the most recent response
+                    if "answer_rating" in latest_response and latest_response["answer_rating"]:
+                        response["answer_rating"] = latest_response["answer_rating"]
+            
+            return response
         else:
             # Fallback demo analysis
             word_count = random.randint(15, 80)
@@ -434,10 +510,43 @@ async def analyze_video(
                 "metrics": analysis_result["metrics"]
             }
             
-            # Update session with emotion data
+            # Update session with emotion data and potentially update answer rating
             if session_id in sessions and len(sessions[session_id]["responses"]) > question_index:
                 sessions[session_id]["responses"][question_index]["emotion_analysis"] = emotion_analysis
                 sessions[session_id]["responses"][question_index]["video_analysis"] = analysis_result
+                
+                # Update answer rating with emotion analysis if it exists
+                response_data = sessions[session_id]["responses"][question_index]
+                if "answer_rating" in response_data and response_data["answer_rating"] and answer_rater:
+                    try:
+                        # Get the question and previous transcript
+                        session_data = sessions[session_id]
+                        current_question = session_data["questions"][question_index] if question_index < len(session_data["questions"]) else None
+                        transcript_data = response_data.get("transcript", {})
+                        voice_metrics = response_data.get("voice_metrics", {})
+                        
+                        if current_question and transcript_data.get("transcript"):
+                            # Re-rate with emotion analysis included
+                            updated_rating = await answer_rater.rate_answer(
+                                question=current_question.get("question", ""),
+                                answer=transcript_data["transcript"],
+                                question_type=current_question.get("type", "behavioral"),
+                                role=session_data["role"],
+                                experience_level=session_data["experience_level"],
+                                transcript_data=transcript_data,
+                                voice_metrics=voice_metrics,
+                                emotion_analysis=emotion_analysis
+                            )
+                            
+                            # Update the stored rating
+                            response_data["answer_rating"] = updated_rating
+                            if "answer_ratings" in session_data and len(session_data["answer_ratings"]) > question_index:
+                                session_data["answer_ratings"][question_index] = updated_rating
+                            
+                            print(f"✓ Updated AI rating with emotion analysis: {updated_rating['overall_rating']['score']}/10")
+                            
+                    except Exception as e:
+                        print(f"⚠ Answer rating update failed: {str(e)}")
             
             print(f"✓ Real video analysis completed: {analysis_result['face_detection_rate']:.1f}% face detection")
             
@@ -478,10 +587,109 @@ async def analyze_video(
             except:
                 pass
 
-# Import the rest of the endpoints from backend/main.py
+@app.get("/api/answer-rating/{session_id}/{question_index}")
+async def get_answer_rating(session_id: str, question_index: int):
+    """Get AI rating for a specific answer"""
+    try:
+        if session_id not in sessions:
+            raise HTTPException(status_code=404, detail="Session not found")
+        
+        session_data = sessions[session_id]
+        
+        # Check if we have the answer rating
+        if "answer_ratings" in session_data and len(session_data["answer_ratings"]) > question_index:
+            return {
+                "session_id": session_id,
+                "question_index": question_index,
+                "rating": session_data["answer_ratings"][question_index],
+                "question": session_data["questions"][question_index] if question_index < len(session_data["questions"]) else None
+            }
+        
+        # Check if we have response data to generate rating
+        if len(session_data.get("responses", [])) > question_index:
+            response_data = session_data["responses"][question_index]
+            if "answer_rating" in response_data:
+                return {
+                    "session_id": session_id,
+                    "question_index": question_index,
+                    "rating": response_data["answer_rating"],
+                    "question": session_data["questions"][question_index] if question_index < len(session_data["questions"]) else None
+                }
+        
+        raise HTTPException(status_code=404, detail="Answer rating not found for this question")
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get answer rating: {str(e)}")
+
+@app.get("/api/answer-ratings/{session_id}")
+async def get_all_answer_ratings(session_id: str):
+    """Get all answer ratings for a session"""
+    try:
+        if session_id not in sessions:
+            raise HTTPException(status_code=404, detail="Session not found")
+        
+        session_data = sessions[session_id]
+        ratings = []
+        
+        # Get ratings from stored answer_ratings or from individual responses
+        answer_ratings = session_data.get("answer_ratings", [])
+        responses = session_data.get("responses", [])
+        questions = session_data.get("questions", [])
+        
+        for i, question in enumerate(questions):
+            rating_data = {
+                "question_index": i,
+                "question": question,
+                "rating": None
+            }
+            
+            # Try to get rating from answer_ratings first
+            if i < len(answer_ratings) and answer_ratings[i]:
+                rating_data["rating"] = answer_ratings[i]
+            # Otherwise try to get from individual response
+            elif i < len(responses) and "answer_rating" in responses[i]:
+                rating_data["rating"] = responses[i]["answer_rating"]
+            
+            ratings.append(rating_data)
+        
+        return {
+            "session_id": session_id,
+            "total_questions": len(questions),
+            "ratings": ratings,
+            "average_rating": calculate_average_rating(ratings)
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get answer ratings: {str(e)}")
+
+def calculate_average_rating(ratings):
+    """Calculate average rating from all rated answers"""
+    valid_ratings = []
+    for rating_data in ratings:
+        if rating_data["rating"] and "overall_rating" in rating_data["rating"]:
+            score = rating_data["rating"]["overall_rating"].get("score", 0)
+            if score > 0:
+                valid_ratings.append(score)
+    
+    if valid_ratings:
+        return {
+            "score": round(sum(valid_ratings) / len(valid_ratings), 1),
+            "count": len(valid_ratings),
+            "total_questions": len(ratings)
+        }
+    else:
+        return {
+            "score": 0,
+            "count": 0,
+            "total_questions": len(ratings)
+        }
 @app.get("/api/feedback/{session_id}")
 async def get_feedback(session_id: str):
-    """Generate comprehensive AI-powered feedback"""
+    """Generate comprehensive AI-powered feedback with enhanced rating analysis"""
     try:
         if session_id not in sessions:
             raise HTTPException(status_code=404, detail="Session not found")
@@ -527,12 +735,52 @@ async def get_feedback(session_id: str):
                     },
                     "response_count": len(session_data.get("questions", [])),
                     "session_duration": random.randint(300, 600)
+                },
+                "answer_ratings_summary": {
+                    "average_score": 0,
+                    "total_rated": 0,
+                    "message": "No answers were rated in this session"
                 }
             }
         
-        # Use real analysis if available (import from backend/main.py functions)
-        # For now, return demo feedback - can be enhanced with real analysis functions
+        # Use enhanced AI feedback generator if available
+        if feedback_generator:
+            try:
+                # Calculate confidence score from responses
+                confidence_score = calculate_confidence_score(responses)
+                
+                # Generate AI feedback
+                ai_feedback = await feedback_generator.generate_feedback(
+                    responses=responses,
+                    confidence_score=confidence_score,
+                    interview_role=session_data["role"]
+                )
+                
+                # Get answer ratings summary
+                answer_ratings_summary = get_answer_ratings_summary(session_data)
+                
+                # Calculate comprehensive analytics
+                analytics = calculate_comprehensive_analytics(responses)
+                
+                return {
+                    "session_id": session_id,
+                    "confidence_score": confidence_score,
+                    "feedback": ai_feedback,
+                    "analytics": analytics,
+                    "answer_ratings_summary": answer_ratings_summary,
+                    "questions_source": session_data.get("questions_source", "unknown"),
+                    "role": session_data["role"],
+                    "experience_level": session_data["experience_level"]
+                }
+                
+            except Exception as e:
+                print(f"⚠ AI feedback generation failed: {str(e)}")
+                # Fall through to basic feedback
+        
+        # Basic feedback calculation
         overall_score = random.randint(65, 85)
+        answer_ratings_summary = get_answer_ratings_summary(session_data)
+        
         return {
             "session_id": session_id,
             "confidence_score": {"overall_score": overall_score},
@@ -545,12 +793,149 @@ async def get_feedback(session_id: str):
             "analytics": {
                 "speech_analytics": {"total_words": 250, "average_speaking_rate": 150},
                 "response_count": len(responses)
-            }
+            },
+            "answer_ratings_summary": answer_ratings_summary
         }
         
     except Exception as e:
         print(f"Feedback generation error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Feedback generation failed: {str(e)}")
+
+def calculate_confidence_score(responses):
+    """Calculate confidence score from response data"""
+    if not responses:
+        return {"overall_score": 0}
+    
+    voice_scores = []
+    emotion_scores = []
+    
+    for response in responses:
+        # Voice metrics
+        voice_metrics = response.get("voice_metrics", {})
+        if voice_metrics:
+            stability = voice_metrics.get("stability_score", 70)
+            clarity = voice_metrics.get("clarity_score", 70)
+            voice_scores.append((stability + clarity) / 2)
+        
+        # Emotion metrics
+        emotion_analysis = response.get("emotion_analysis", {})
+        if emotion_analysis:
+            metrics = emotion_analysis.get("metrics", {})
+            confidence = metrics.get("confidence_score", 70)
+            eye_contact = metrics.get("eye_contact_percentage", 70)
+            emotion_scores.append((confidence + eye_contact) / 2)
+    
+    # Calculate overall score
+    all_scores = voice_scores + emotion_scores
+    overall_score = sum(all_scores) / len(all_scores) if all_scores else 70
+    
+    return {
+        "overall_score": round(overall_score, 1),
+        "component_scores": {
+            "voice_stability": {"score": sum(voice_scores) / len(voice_scores) if voice_scores else 70, "weight": 0.4},
+            "emotional_confidence": {"score": sum(emotion_scores) / len(emotion_scores) if emotion_scores else 70, "weight": 0.6}
+        }
+    }
+
+def get_answer_ratings_summary(session_data):
+    """Get summary of answer ratings for the session"""
+    answer_ratings = session_data.get("answer_ratings", [])
+    responses = session_data.get("responses", [])
+    
+    # Collect all ratings
+    all_ratings = []
+    
+    # From answer_ratings
+    for rating in answer_ratings:
+        if rating and "overall_rating" in rating:
+            score = rating["overall_rating"].get("score", 0)
+            if score > 0:
+                all_ratings.append(score)
+    
+    # From individual responses if not in answer_ratings
+    if not all_ratings:
+        for response in responses:
+            if "answer_rating" in response and response["answer_rating"]:
+                rating = response["answer_rating"]
+                if "overall_rating" in rating:
+                    score = rating["overall_rating"].get("score", 0)
+                    if score > 0:
+                        all_ratings.append(score)
+    
+    if all_ratings:
+        return {
+            "average_score": round(sum(all_ratings) / len(all_ratings), 1),
+            "total_rated": len(all_ratings),
+            "total_questions": len(session_data.get("questions", [])),
+            "highest_score": max(all_ratings),
+            "lowest_score": min(all_ratings),
+            "message": f"Rated {len(all_ratings)} out of {len(session_data.get('questions', []))} answers"
+        }
+    else:
+        return {
+            "average_score": 0,
+            "total_rated": 0,
+            "total_questions": len(session_data.get("questions", [])),
+            "message": "No answers were rated in this session"
+        }
+
+def calculate_comprehensive_analytics(responses):
+    """Calculate comprehensive analytics from all responses"""
+    if not responses:
+        return {}
+    
+    # Speech analytics
+    total_words = 0
+    total_filler_words = 0
+    speaking_rates = []
+    
+    # Voice analytics
+    voice_stabilities = []
+    voice_clarities = []
+    
+    # Emotion analytics
+    confidence_levels = []
+    eye_contact_percentages = []
+    
+    for response in responses:
+        # Transcript data
+        transcript = response.get("transcript", {})
+        if transcript:
+            total_words += transcript.get("word_count", 0)
+            total_filler_words += transcript.get("filler_word_count", 0)
+            if transcript.get("speaking_rate"):
+                speaking_rates.append(transcript["speaking_rate"])
+        
+        # Voice metrics
+        voice_metrics = response.get("voice_metrics", {})
+        if voice_metrics:
+            voice_stabilities.append(voice_metrics.get("stability_score", 0))
+            voice_clarities.append(voice_metrics.get("clarity_score", 0))
+        
+        # Emotion analysis
+        emotion_analysis = response.get("emotion_analysis", {})
+        if emotion_analysis:
+            metrics = emotion_analysis.get("metrics", {})
+            confidence_levels.append(metrics.get("confidence_score", 0))
+            eye_contact_percentages.append(metrics.get("eye_contact_percentage", 0))
+    
+    return {
+        "speech_analytics": {
+            "total_words": total_words,
+            "total_filler_words": total_filler_words,
+            "filler_word_percentage": (total_filler_words / total_words * 100) if total_words > 0 else 0,
+            "average_speaking_rate": sum(speaking_rates) / len(speaking_rates) if speaking_rates else 0
+        },
+        "voice_analytics": {
+            "average_stability": sum(voice_stabilities) / len(voice_stabilities) if voice_stabilities else 0,
+            "average_clarity": sum(voice_clarities) / len(voice_clarities) if voice_clarities else 0
+        },
+        "emotion_analytics": {
+            "average_confidence_level": sum(confidence_levels) / len(confidence_levels) if confidence_levels else 0,
+            "average_eye_contact": sum(eye_contact_percentages) / len(eye_contact_percentages) if eye_contact_percentages else 0
+        },
+        "response_count": len(responses)
+    }
 
 @app.get("/api/session/{session_id}")
 async def get_session(session_id: str):
