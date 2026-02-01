@@ -25,7 +25,8 @@ dist/
 .DS_Store
 Thumbs.db
 
-# Local development
+# Local development files (not needed for serverless)
+backend/
 ffmpeg.exe
 temp_*
 *.wav
@@ -37,7 +38,6 @@ temp_*
 .gitignore
 
 # Documentation (optional)
-README.md
 SETUP.md
 
 # Scripts
