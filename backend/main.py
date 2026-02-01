@@ -166,6 +166,14 @@ DEMO_QUESTIONS = {
 async def root():
     return {"message": "InterVue AI API is running with real analysis!", "status": "healthy"}
 
+@app.get("/api/health")
+async def health_check():
+    return {"status": "healthy", "message": "InterVue AI API is running with real analysis!"}
+
+@app.get("/api/")
+async def api_root():
+    return {"message": "InterVue AI API", "status": "healthy", "version": "1.0.0"}
+
 @app.post("/api/interview/start")
 async def start_interview(
     role: str = Form(...),
