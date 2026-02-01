@@ -1,12 +1,10 @@
 """
-InterVue AI - Railway Deployment Entry Point
-Full-stack AI-powered interview practice platform
+InterVue AI - Full-Stack Interview Practice Platform
+Real AI-powered analysis with FastAPI backend and React frontend
 """
 
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, HTMLResponse
 import os
 import sys
 import uuid
@@ -43,10 +41,10 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS middleware - configured for Railway
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Railway will handle domain restrictions
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -78,7 +76,7 @@ try:
 except Exception as e:
     print(f"⚠ Question generator initialization failed: {str(e)}")
 
-# In-memory storage (Railway supports PostgreSQL for production)
+# In-memory storage
 sessions = {}
 
 # Demo questions as fallback
@@ -232,17 +230,16 @@ DEMO_QUESTIONS = {
 # API Routes
 @app.get("/")
 async def root():
-    return {"message": "InterVue AI is running on Railway!", "status": "healthy", "environment": "railway"}
+    return {"message": "InterVue AI API is running!", "status": "healthy"}
 
 @app.get("/api/")
 async def api_root():
-    return {"message": "InterVue AI API", "status": "healthy", "version": "1.0.0", "environment": "railway"}
+    return {"message": "InterVue AI API", "status": "healthy", "version": "1.0.0"}
 
 @app.get("/api/health")
 async def health_check():
     return {
         "status": "healthy",
-        "environment": "railway",
         "audio_analyzer": audio_analyzer is not None,
         "video_analyzer": video_analyzer is not None,
         "question_generator": question_generator is not None,
